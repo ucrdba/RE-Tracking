@@ -4,8 +4,23 @@ phantom.injectJs(phantom.casperPath + '\\bin\\bootstrap.js');
 var system = require('system');
 //console.log(system.args[1]);
 
-var casper = require('casper').create();
-casper.options.waitTimeout = 10000;
+var casper = require('casper').create({
+//verbose: true,
+//logLevel : 'debug'
+});
+
+casper.options.waitTimeout = 20000;
+
+// help is tracing page's console.log 
+//casper.on('remote.message', function(msg) { 
+//    console.log('[Remote Page] ' + msg); 
+//}); 
+
+// Print out all the error messages from the web page 
+casper.on("page.error", function(msg, trace) { 
+    casper.echo("[Remote Page Error] " + msg, "ERROR"); 
+    casper.echo("[Remote Error trace] " + JSON.stringify(trace, undefined, 4)); 
+});
 
 if (system.args.length < 3) {
 	console.log('proper usage: getDataCasper.js username password');
@@ -64,11 +79,14 @@ writeCurrentPageToFile = function() {
 			this.thenClick('div.pagination > a.next', function() {
 				console.log('clicked next page button');
 				
-				var waitTime = Math.floor((Math.random() * 10) + 1); //random number from 1-10
+				var waitTime = Math.floor((Math.random() * 5) + 1); //random number from 1-10
 				console.log('waiting for ' + waitTime + ' seconds');
 				this.wait(waitTime * 1000, function(){
+					console.log('write file to disk');
 					writeCurrentPageToFile();
-				});
+					console.log('saving image:' + currentPageNum + 'myimage.png');
+			        casper.capture(currentPageNum + 'myimage.png');
+				},20000);
 			});
 		}
 		
@@ -100,6 +118,7 @@ writeCurrentPageToFile = function() {
 
 casper.waitForSelector('div.pagination', function() {	
 	writeCurrentPageToFile();
+	//casper.capture('image.png') 
 });
 
 casper.run();
