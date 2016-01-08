@@ -28,6 +28,7 @@ if (system.args.length < 3) {
 }
 
 var fs = require('fs');
+var extractedData = [];
 
 casper.start('http://www.realtytrac.com/', function() {
     this.echo(this.getTitle());
@@ -44,7 +45,7 @@ casper.then(function() {
 });
 
 casper.thenEvaluate(function() {
-    $('#txtSearch').val('Riverside county, CA');
+    $('#txtSearch').val('Riverside, CA');
 	$('#header_searchspot').trigger('click');
 });
 
@@ -73,39 +74,108 @@ casper.waitForSelector('dd.equity', function() {
    });
 
    var pages = [];
-   for (i = 0; i < pageCount; i++) {
+   for (i = 0; i < pageCount-30; i++) {
       pages.push(i+1);
    }
 
    console.log('pages: ' + pages);
 
    casper.waitForSelector('dd.equity', function() {
-      var html = this.getHTML();
       var currentPageNum = casper.evaluate(function() {
          return $('div.pagination > span.current').text();
       });
-      fs.write(currentPageNum + '.html', html, 'wb');
-      casper.capture(currentPageNum + 'myimage.png');
-      console.log('finished writing ' + currentPageNum + '.html to disk');
+
+		var extractJson = function() {
+			var houseArray = [];
+
+			$('div.house > div.content').each(function(i, content) {
+				var houseData = {};
+
+				var addressData = $(content).find('div.basicdata > div.address-data > h2 > a > strong');
+				houseData.streetAddress = addressData.find('span[itemprop=streetAddress]').text();
+				houseData.city = addressData.find('span[itemprop=addressLocality]').text();
+				houseData.state = addressData.find('span[itemprop=addressRegion]').text();
+				houseData.zip = addressData.find('span[itemprop=postalCode]').text();
+
+				var sizeData = $(content).find('div.basicdata > div.characteristics > dl.info > span.propertyInfo');
+				sizeData.each(function(i, data) {
+					var type = $(data).children('dt').text();
+
+					if (type) {
+						type = type.trim();
+						if (type == 'Beds') {
+							houseData.beds = $(data).children('dd').text().trim();
+						}
+						else if (type == 'Baths') {
+							houseData.baths = $(data).children('dd').text().trim();
+						}
+						else if (type == 'sqft') {
+							houseData.squareFeet = $(data).children('dd').text().trim();
+						}
+					}
+				});
+
+				var priceData = $(content).find('div.price-info > dl.info > span.propertyInfo');
+				priceData.each(function(i, data) {
+					var type = $(data).children('dt').attr('class');
+
+					if (type) {
+						type = type.trim();
+						if (type == 'price') {
+							houseData.price = $(data).children('dd').text().trim();
+						}
+						else if (type == 'date') {
+							houseData.date = $(data).children('dd').text().trim();
+						}
+						else if (type == 'equity') {
+							var equityLtv = $(data).children('dd').text().trim().split('/');
+							houseData.equity = equityLtv[0];
+							houseData.ltv = equityLtv[1];
+						}
+					}
+				});
+
+				houseArray.push(houseData);
+			});
+
+			return houseArray;
+		}
+
+      var houseArray = casper.evaluate(extractJson);
+
+      for (i = 0; i < houseArray.length; i++) {
+         extractedData.push(houseArray[i]);
+      }
 
       casper.each(pages, function (self, page) {
          self.thenClick('div.pagination > a.next', function() {
             casper.waitForSelector('dd.equity', function() {
-         		var html = this.getHTML();
+         		//var html = this.getHTML();
+
+               var houseArray = casper.evaluate(extractJson);
+
+               for (i = 0; i < houseArray.length; i++) {
+                  extractedData.push(houseArray[i]);
+               }
+
          		var currentPageNum = casper.evaluate(function() {
          			return $('div.pagination > span.current').text();
          		});
-         		fs.write(currentPageNum + '.html', html, 'wb');
-               casper.capture(currentPageNum + 'myimage.png');
-         		console.log('finished writing ' + currentPageNum + '.html to disk');
+         		//fs.write(currentPageNum + '.html', html, 'wb');
+               //casper.capture(currentPageNum + 'myimage.png');
+         		console.log('finished processing page ' + currentPageNum);
 
-               var waitTime = Math.floor((Math.random() * 5) + 1); //random number from 1-10
+               var waitTime = Math.floor((Math.random() * 5) + 1); //random number from 1-5
    				console.log('waiting for ' + waitTime + ' seconds');
    				this.wait(waitTime * 1000, function(){},20000);
             });
          });
       });
    });
+});
+
+casper.then(function() {
+   fs.write('extractedData.json', JSON.stringify(extractedData), 'wb');
 });
 
 casper.run();
