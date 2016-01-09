@@ -22,10 +22,10 @@ casper.options.waitTimeout = 20000;
 //     casper.echo("[Remote Error trace] " + JSON.stringify(trace, undefined, 4));
 // });
 
-if (system.args.length < 3) {
-	console.log('proper usage: getDataCasper.js username password');
-	casper.exit();
-}
+// if (system.args.length < 3) {
+// 	console.log('proper usage: getDataCasper.js username password');
+// 	casper.exit();
+// }
 
 var fs = require('fs');
 var extractedData = [];
@@ -34,31 +34,58 @@ casper.start('http://www.realtytrac.com/', function() {
     this.echo(this.getTitle());
 });
 
-casper.thenEvaluate(function(username, password) {
-    $('#username').val(username);
-	$('#password').val(password);
-	$('#headerLoginForm').submit();
-}, system.args[1], system.args[2]);
+if (system.args.length >= 4) {
+	casper.thenEvaluate(function(username, password) {
+	   $('#username').val(username);
+		$('#password').val(password);
+		$('#headerLoginForm').submit();
+	}, system.args[2], system.args[3]);
+}
+else {
+	casper.thenOpen('http://www.realtytrac.com/dashboard/', function(){
+		console.log('No credentials passed so just proceeding without login');
+	});
+}
 
 casper.then(function() {
-    console.log('login form submitted, new location is ' + this.getCurrentUrl());
+    console.log('new location is ' + this.getCurrentUrl());
 });
 
-casper.thenEvaluate(function() {
-    $('#txtSearch').val('Riverside, CA');
-	$('#header_searchspot').trigger('click');
+casper.thenEvaluate(function(searchString) {
+    $('#txtSearch').val(searchString);
+	 $('#header_searchspot').trigger('click');
+}, system.args[1]);
+
+casper.waitForSelector('dd.equity', function() {
+	casper.capture('afterSearch.png');
+	console.log('Found dd.equity');
 });
 
-casper.then(function() {
-    console.log('riverside county search triggered, new location is ' + this.getCurrentUrl());
-});
+// casper.then(function() {
+// 	console.log('Added filter criteria and submitting');
+//
+// 	casper.evaluate(function() {
+// 		$('.advancedSearchLink:first').click();
+// 		$('#SH_ddlBeds').prop('disabled', false).val('3');
+//   	   $('#SH_ddlBaths').prop('disabled', false).val('2');
+// 		//$('.searchSubmitButton').click();
+// 	});
+//
+// 	casper.capture('afterSearch2.png');
+// 	console.log('riverside county search triggered, new location is ' + this.getCurrentUrl());
+// });
+
+// casper.waitForSelector('.filter-item', function() {
+// 	casper.capture('afterSearch3.png');
+// 	console.log('Found filter items');
+// });
 
 var preForclosureUrl;
 casper.waitForSelector('#listTabs', function() {
    preForclosureUrl = casper.evaluate(function() {
       return $('a.tab-item:eq(1)').attr('href');
    });
-   preForclosureUrl = 'http://www.realtytrac.com' + preForclosureUrl;
+   preForclosureUrl = 'http://www.realtytrac.com' + preForclosureUrl + '?sortbyfield=equity,desc&itemsper=50';
 
    console.log('going to "' + preForclosureUrl + '"');
    casper.thenOpen(preForclosureUrl, function() {
@@ -66,19 +93,48 @@ casper.waitForSelector('#listTabs', function() {
    });
 });
 
+// casper.waitForSelector('#viewsPerPage', function() {
+// 	console.log('at ' + this.getCurrentUrl());
+// 	casper.capture('preViewsPerPage.png');
+// 	console.log('#viewsPerPage found, choosing 50 per page');
+// 	casper.evaluate(function() {
+// 		$('#viewsPerPage')[0].selectedIndex = $('#viewsPerPage').children().length - 1;
+// 		$('#viewsPerPage').trigger('change');
+// 	});
+// });
+//
+// casper.waitForSelector('#sortBy', function() {
+// 	console.log('at ' + this.getCurrentUrl());
+// 	casper.capture('preSortBy.png');
+// 	console.log('#sortBy found, choosing equity high to low');
+// 	casper.evaluate(function() {
+// 		$('#sortBy')[0].selectedIndex = $('#sortBy').children().length - 3;
+// 		$('#sortBy').trigger('change');
+// 	});
+// });
+
 casper.waitForSelector('dd.equity', function() {
-   console.log('found div.pagination');
+	console.log('at ' + this.getCurrentUrl());
+	casper.capture('ddEquityFound.png');
+	console.log('found div.pagination');
 
    var pageCount = casper.evaluate(function() {
-      return $('.pagination').find('.page:last').text().substr(2);
+		var lastPageNumber = $('.pagination').find('.page:last').text();
+		if (lastPageNumber.length > 2) {
+			if (lastPageNumber.substr(0, 2) == '..') {
+				lastPageNumber = lastPageNumber.substr(2);
+			}
+		}
+
+		return lastPageNumber;
    });
 
    var pages = [];
-   for (i = 0; i < pageCount-30; i++) {
+   for (i = 0; i < pageCount - 1; i++) {
       pages.push(i+1);
    }
 
-   console.log('pages: ' + pages);
+   console.log('pages: ' + pageCount);
 
    casper.waitForSelector('dd.equity', function() {
       var currentPageNum = casper.evaluate(function() {
@@ -91,11 +147,12 @@ casper.waitForSelector('dd.equity', function() {
 			$('div.house > div.content').each(function(i, content) {
 				var houseData = {};
 
-				var addressData = $(content).find('div.basicdata > div.address-data > h2 > a > strong');
+				var addressData = $(content).find('div.basicdata > div.address-data a > strong');
 				houseData.streetAddress = addressData.find('span[itemprop=streetAddress]').text();
 				houseData.city = addressData.find('span[itemprop=addressLocality]').text();
 				houseData.state = addressData.find('span[itemprop=addressRegion]').text();
 				houseData.zip = addressData.find('span[itemprop=postalCode]').text();
+				houseData.url = 'http://www.realtytrac.com' + addressData.parents('a:first').attr('href');
 
 				var sizeData = $(content).find('div.basicdata > div.characteristics > dl.info > span.propertyInfo');
 				sizeData.each(function(i, data) {
@@ -129,11 +186,25 @@ casper.waitForSelector('dd.equity', function() {
 						}
 						else if (type == 'equity') {
 							var equityLtv = $(data).children('dd').text().trim().split('/');
-							houseData.equity = equityLtv[0];
-							houseData.ltv = equityLtv[1];
+
+							if (equityLtv.length == 2) {
+								houseData.equity = equityLtv[0];
+								houseData.ltv = equityLtv[1];
+							}
+							else{
+								houseData.equity = null;
+								houseData.ltv = null;
+							}
 						}
 					}
 				});
+
+				if ($(content).children('.hot-deal-property').length > 0) {
+					houseData.isHotDeal = true;
+				}
+				else {
+					houseData.isHotDeal = false;
+				}
 
 				houseArray.push(houseData);
 			});
@@ -146,6 +217,9 @@ casper.waitForSelector('dd.equity', function() {
       for (i = 0; i < houseArray.length; i++) {
          extractedData.push(houseArray[i]);
       }
+
+		casper.capture('captureData.png');
+		//pages = []; //todo: remove this
 
       casper.each(pages, function (self, page) {
          self.thenClick('div.pagination > a.next', function() {
@@ -175,7 +249,11 @@ casper.waitForSelector('dd.equity', function() {
 });
 
 casper.then(function() {
-   fs.write('extractedData.json', JSON.stringify(extractedData), 'wb');
+   var specialChars = /[^\w]+/;
+   var fileName = system.args[1].replace(specialChars, '-') + '.json';
+
+   console.log('Finished capturing data, writing results to ' + fileName)
+   fs.write(fileName, JSON.stringify(extractedData), 'wb');
 });
 
 casper.run();
