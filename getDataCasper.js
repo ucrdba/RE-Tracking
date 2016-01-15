@@ -11,22 +11,6 @@ var casper = require('casper').create({
 
 casper.options.waitTimeout = 20000;
 
-// help is tracing page's console.log
-//casper.on('remote.message', function(msg) {
-//    console.log('[Remote Page] ' + msg);
-//});
-
-// Print out all the error messages from the web page
-// casper.on("page.error", function(msg, trace) {
-//     casper.echo("[Remote Page Error] " + msg, "ERROR");
-//     casper.echo("[Remote Error trace] " + JSON.stringify(trace, undefined, 4));
-// });
-
-// if (system.args.length < 3) {
-// 	console.log('proper usage: getDataCasper.js username password');
-// 	casper.exit();
-// }
-
 var fs = require('fs');
 var extractedData = [];
 
@@ -61,25 +45,6 @@ casper.waitForSelector('dd.equity', function() {
 	console.log('Found dd.equity');
 });
 
-// casper.then(function() {
-// 	console.log('Added filter criteria and submitting');
-//
-// 	casper.evaluate(function() {
-// 		$('.advancedSearchLink:first').click();
-// 		$('#SH_ddlBeds').prop('disabled', false).val('3');
-//   	   $('#SH_ddlBaths').prop('disabled', false).val('2');
-// 		//$('.searchSubmitButton').click();
-// 	});
-//
-// 	casper.capture('afterSearch2.png');
-// 	console.log('riverside county search triggered, new location is ' + this.getCurrentUrl());
-// });
-
-// casper.waitForSelector('.filter-item', function() {
-// 	casper.capture('afterSearch3.png');
-// 	console.log('Found filter items');
-// });
-
 var preForclosureUrl;
 casper.waitForSelector('#listTabs', function() {
    preForclosureUrl = casper.evaluate(function() {
@@ -92,26 +57,6 @@ casper.waitForSelector('#listTabs', function() {
       console.log('at ' + preForclosureUrl);
    });
 });
-
-// casper.waitForSelector('#viewsPerPage', function() {
-// 	console.log('at ' + this.getCurrentUrl());
-// 	casper.capture('preViewsPerPage.png');
-// 	console.log('#viewsPerPage found, choosing 50 per page');
-// 	casper.evaluate(function() {
-// 		$('#viewsPerPage')[0].selectedIndex = $('#viewsPerPage').children().length - 1;
-// 		$('#viewsPerPage').trigger('change');
-// 	});
-// });
-//
-// casper.waitForSelector('#sortBy', function() {
-// 	console.log('at ' + this.getCurrentUrl());
-// 	casper.capture('preSortBy.png');
-// 	console.log('#sortBy found, choosing equity high to low');
-// 	casper.evaluate(function() {
-// 		$('#sortBy')[0].selectedIndex = $('#sortBy').children().length - 3;
-// 		$('#sortBy').trigger('change');
-// 	});
-// });
 
 casper.waitForSelector('dd.equity', function() {
 	console.log('at ' + this.getCurrentUrl());
