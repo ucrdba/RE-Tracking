@@ -5,8 +5,26 @@ var system = require('system');
 //console.log(system.args[1]);
 
 var casper = require('casper').create({
-//verbose: true,
-//logLevel : 'debug'
+   //verbose: true,
+   //logLevel : 'debug',
+  stepTimeout: 15000,
+  viewportSize: {
+    width: 1024,
+    height: 768
+  },
+  pageSettings: {
+    "userAgent": 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.10 (KHTML, like Gecko) Chrome/23.0.1262.0 Safari/537.10',
+    "loadImages": false,
+    "loadPlugins": false,
+    "webSecurityEnabled": false,
+    "ignoreSslErrors": true
+  },
+  onWaitTimeout: function() {
+    casper.echo('Wait TimeOut Occured');
+  },
+  onStepTimeout: function() {
+    casper.echo('Step TimeOut Occured');
+  }
 });
 
 casper.options.waitTimeout = 20000;
@@ -18,12 +36,12 @@ casper.start('http://www.realtytrac.com/', function() {
     this.echo(this.getTitle());
 });
 
-if (system.args.length >= 4) {
+if (system.args.length >= 6) {
 	casper.thenEvaluate(function(username, password) {
 	   $('#username').val(username);
 		$('#password').val(password);
 		$('#headerLoginForm').submit();
-	}, system.args[2], system.args[3]);
+	}, system.args[4], system.args[5]);
 }
 else {
 	casper.thenOpen('http://www.realtytrac.com/dashboard/', function(){
@@ -186,13 +204,132 @@ casper.waitForSelector('dd.equity', function() {
 
                var waitTime = Math.floor((Math.random() * 5) + 1); //random number from 1-5
    				console.log('waiting for ' + waitTime + ' seconds');
-   				this.wait(waitTime * 1000, function(){},20000);
+   				this.wait(waitTime * 1000, function(){});
             });
          });
       });
    });
 });
 
+casper.then(function() {
+   console.log('realtytrac processing complete');
+})
+
+casper.thenOpen('http://titleguy.net/', function(){});
+
+casper.thenEvaluate(function(username, password) {
+    console.log(username + '|' + password);
+    var f = document.querySelector('form');
+    f.querySelector('input[name=username]').value = username;
+    f.querySelector('input[name=Password]').value = password;
+    //f.submit();
+}, system.args[2], system.args[3]);
+
+casper.thenClick('form input[type=submit]', function() {
+   console.log('Clicked submit button');
+});
+//
+// casper.then(function() {
+//    this.capture('test1.png');
+//    console.log('Submitted form');
+// })
+
+// casper.thenOpen('http://www.google.com', function() {
+//    this.capture('google.png');
+// });
+
+//casper.waitForUrl('ClassicMenu', function() {
+   //console.log('At ' + this.getCurrentUrl());
+//});
+
+// casper.wait(15000, function() {
+//    console.log('waited for 5 seconds');
+// })
+
+var classicSeriesAccess;
+casper.then(function() {
+   this.capture('classicSeriesAccess.png');
+   console.log('At ' + this.getCurrentUrl());
+
+   classicSeriesAccess = casper.evaluate(function() {
+      return jQuery('#tblMenuMain').find('a:eq(3)').attr('href');
+   });
+
+   console.log('classicSeriesAccess is ' + classicSeriesAccess);
+
+   casper.thenOpen(classicSeriesAccess, function() {
+      console.log('At ' + this.getCurrentUrl());
+   });
+});
+
+casper.then(function() {
+   casper.each(extractedData, function (self, houseData) {
+
+      casper.thenOpen('https://www.titleprofile.com/AddressEntry.asp', function() {
+         console.log('At ' + this.getCurrentUrl());
+         console.log('Current houseData: ' + JSON.stringify(houseData));
+      });
+
+      casper.then(function() {
+         console.log('Filling address form out and submitting');
+
+         this.fill('form', {
+              'address':    '39652 Orchard St', //houseData.streetAddress,
+              'city':    'Cherry Valley', //houseData.city,
+              'state':   'CA', //houseData.state,
+              'zip':       '92223', //houseData.zip
+          }, true);
+      });
+
+      casper.then(function() {
+         this.capture('afterAddressSubmit.png');
+      });
+
+      casper.thenClick('#CyberProfileTB > tbody > tr > td > nobr > a', function() {
+         console.log('opening property reports');
+      });
+
+      casper.thenClick('#N5TB > tbody > tr > td > nobr > a', function() {
+         console.log('opening comparable properties');
+      });
+
+      casper.then(function() {
+         console.log('extracting comparable property data');
+
+         var comparableData = casper.evaluate(function() {
+            var comparableData = {
+               properties: []
+            };
+
+            var rows = document.querySelectorAll('body > form > table > tbody > tr');
+            for (var i = 3; i < rows.length; i++) {
+               var property = {};
+               property.address = rows[i].children[1].innerText;
+               property.date = rows[i].children[2].innerText;
+               property.price = rows[i].children[3].innerText;
+               property.pricePerSquareFoot = rows[i].children[4].innerText;
+               property.bldArea = rows[i].children[5].innerText;
+               property.rmBrBath = rows[i].children[6].innerText;
+               property.yearBuilt = rows[i].children[7].innerText;
+               property.lotArea = rows[i].children[8].innerText;
+               property.pool = rows[i].children[9].innerText;
+               property.proximity = rows[i].children[10].innerText;
+               comparableData.properties.push(property);
+            }
+
+            return comparableData;
+         });
+
+         houseData.comparableData = comparableData;
+      });
+   });
+});
+
+casper.then(function() {
+   this.capture('titleguy.png');
+})
+
+//Write JSON out to disk
 casper.then(function() {
    var specialChars = /[^\w]+/;
    var fileName = system.args[1].replace(specialChars, '-') + '.json';
