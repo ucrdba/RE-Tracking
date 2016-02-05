@@ -1,4 +1,4 @@
-phantom.casperPath = 'C:\\PhantomJS\\n1k0-casperjs-e3a77d0';
+phantom.casperPath = 'C:\\phantomjs\\n1k0-casperjs-1.0.4-0-ge3a77d0\\n1k0-casperjs-e3a77d0';
 phantom.injectJs(phantom.casperPath + '\\bin\\bootstrap.js');
 
 var system = require('system');
@@ -218,17 +218,26 @@ casper.then(function() {
 
 casper.thenOpen('http://titleguy.net/', function(){});
 
-casper.thenEvaluate(function(username, password) {
+casper.then(function() {
+	console.log('Filling in login form with username/password');
+	this.fill('#mainContent > div.content.home.clearfix > div.col-left > div.col-left-login > form', {
+		 'username':    system.args[2],
+		 'Password':       system.args[3]
+	 }, true);
+});
+
+/*casper.thenEvaluate(function(username, password) {
     console.log(username + '|' + password);
     var f = document.querySelector('form');
     f.querySelector('input[name=username]').value = username;
     f.querySelector('input[name=Password]').value = password;
+	
     //f.submit();
 }, system.args[2], system.args[3]);
 
-casper.thenClick('form input[type=submit]', function() {
+casper.thenClick('#mainContent > div.content.home.clearfix > div.col-left > div.col-left-login > form > table > tbody > tr:nth-child(3) > td:nth-child(2) > input[type="submit"]', function() {
    console.log('Clicked submit button');
-});
+});*/
 //
 // casper.then(function() {
 //    this.capture('test1.png');
@@ -239,9 +248,13 @@ casper.thenClick('form input[type=submit]', function() {
 //    this.capture('google.png');
 // });
 
-//casper.waitForUrl('ClassicMenu', function() {
-   //console.log('At ' + this.getCurrentUrl());
-//});
+casper.then(function() {
+   this.capture('titleguy-property-reports.png');
+});
+
+casper.waitForText('Property Reports', function() {
+   console.log('Found Property Reports link, clicking it');
+});
 
 // casper.wait(15000, function() {
 //    console.log('waited for 5 seconds');
