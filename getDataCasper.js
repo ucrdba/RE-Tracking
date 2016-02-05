@@ -24,7 +24,8 @@ var casper = require('casper').create({
   },
   onStepTimeout: function() {
     casper.echo('Step TimeOut Occured');
-  }
+  },
+  exitOnError: false
 });
 
 casper.options.waitTimeout = 20000;
@@ -263,65 +264,97 @@ casper.then(function() {
 });
 
 casper.then(function() {
+   var i = 0;
    casper.each(extractedData, function (self, houseData) {
-
-      casper.thenOpen('https://www.titleprofile.com/AddressEntry.asp', function() {
-         console.log('At ' + this.getCurrentUrl());
-         console.log('Current houseData: ' + JSON.stringify(houseData));
-      });
-
-      casper.then(function() {
-         console.log('Filling address form out and submitting');
-
-         this.fill('form', {
-              'address':    '39652 Orchard St', //houseData.streetAddress,
-              'city':    'Cherry Valley', //houseData.city,
-              'state':   'CA', //houseData.state,
-              'zip':       '92223', //houseData.zip
-          }, true);
-      });
-
-      casper.then(function() {
-         this.capture('afterAddressSubmit.png');
-      });
-
-      casper.thenClick('#CyberProfileTB > tbody > tr > td > nobr > a', function() {
-         console.log('opening property reports');
-      });
-
-      casper.thenClick('#N5TB > tbody > tr > td > nobr > a', function() {
-         console.log('opening comparable properties');
-      });
-
-      casper.then(function() {
-         console.log('extracting comparable property data');
-
-         var comparableData = casper.evaluate(function() {
-            var comparableData = {
-               properties: []
-            };
-
-            var rows = document.querySelectorAll('body > form > table > tbody > tr');
-            for (var i = 3; i < rows.length; i++) {
-               var property = {};
-               property.address = rows[i].children[1].innerText;
-               property.date = rows[i].children[2].innerText;
-               property.price = rows[i].children[3].innerText;
-               property.pricePerSquareFoot = rows[i].children[4].innerText;
-               property.bldArea = rows[i].children[5].innerText;
-               property.rmBrBath = rows[i].children[6].innerText;
-               property.yearBuilt = rows[i].children[7].innerText;
-               property.lotArea = rows[i].children[8].innerText;
-               property.pool = rows[i].children[9].innerText;
-               property.proximity = rows[i].children[10].innerText;
-               comparableData.properties.push(property);
-            }
-
-            return comparableData;
+      try {
+         casper.thenOpen('https://www.titleprofile.com/AddressEntry.asp', function() {
+            i++;
+            console.log('At ' + this.getCurrentUrl());
+            console.log('Current houseData: ' + JSON.stringify(houseData));
          });
 
-         houseData.comparableData = comparableData;
-      });
+         casper.then(function() {
+            console.log('Filling address form out and submitting');
+
+            this.fill('form', {
+                 'address':    houseData.streetAddress,
+                 'city':       houseData.city,
+                 'state':      houseData.state,
+                 'zip':        houseData.zip
+             }, true);
+         });
+
+         casper.then(function() {
+            //this.capture('afterAddressSubmit.png');
+            var owner = '';
+            try {
+               owner = this.fetchText('body > p > table:nth-child(1) > tbody > tr > td:nth-child(2) > p:nth-child(2) > table > tbody > tr:nth-child(1) > td:nth-child(2) > div > b > i');
+            } catch(e) {
+               owner = '';
+            }
+
+            houseData.owner = owner;
+         });
+
+         casper.thenClick('#CyberProfileTB > tbody > tr > td > nobr > a', function() {
+            console.log('opening property reports');
+         });
+
+         var recentForclosureActivity = false;
+         casper.waitForText('Recent Foreclosure Activity', function() {
+            console.log('recentForclosureActivity = true');
+            recentForclosureActivity = true;
+         }, function() {
+            console.log('recentForclosureActivity = false');
+            recentForclosureActivity = false;
+         }, 500);
+
+         casper.then(function() {
+            houseData.recentForclosureActivity = recentForclosureActivity;
+         });
+
+         casper.thenClick('#N5TB > tbody > tr > td > nobr > a', function() {
+            console.log('opening comparable properties');
+         });
+
+         casper.then(function() {
+            console.log('extracting comparable property data');
+
+            var comparableData = casper.evaluate(function() {
+               var comparableData = {
+                  properties: []
+               };
+
+               var rows = document.querySelectorAll('body > form > table > tbody > tr');
+               for (var i = 3; i < rows.length; i++) {
+                  var property = {};
+                  property.address = rows[i].children[1].innerText;
+                  property.date = rows[i].children[2].innerText;
+                  property.price = rows[i].children[3].innerText;
+                  property.pricePerSquareFoot = rows[i].children[4].innerText;
+                  property.bldArea = rows[i].children[5].innerText;
+                  property.rmBrBath = rows[i].children[6].innerText;
+                  property.yearBuilt = rows[i].children[7].innerText;
+                  property.lotArea = rows[i].children[8].innerText;
+                  property.pool = rows[i].children[9].innerText;
+                  property.proximity = rows[i].children[10].innerText;
+                  comparableData.properties.push(property);
+               }
+
+               return comparableData;
+            });
+
+            houseData.comparableData = comparableData;
+         });
+
+         casper.then(function() {
+            console.log('Finished processing ' + i + ' of ' + extractedData.length);
+            console.log('--------------------------------------------------------');
+            console.log('Starting processing ' + (i+1) + ' of ' + extractedData.length);
+         });
+      } catch(e) {
+         console.log('Error while processing ' + JSON.stringify(houseData));
+      }
    });
 });
 
