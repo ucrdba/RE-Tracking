@@ -1,4 +1,4 @@
-phantom.casperPath = 'C:\\PhantomJS\\n1k0-casperjs-e3a77d0';
+phantom.casperPath = 'C:\\phantomjs\\n1k0-casperjs-1.0.4-0-ge3a77d0\\n1k0-casperjs-e3a77d0'; // phantom.casperPath = 'C:\\PhantomJS\\n1k0-casperjs-e3a77d0';
 phantom.injectJs(phantom.casperPath + '\\bin\\bootstrap.js');
 
 var system = require('system');
