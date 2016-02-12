@@ -1,4 +1,4 @@
-phantom.casperPath = 'C:\\phantomjs\\n1k0-casperjs-1.0.4-0-ge3a77d0\\n1k0-casperjs-e3a77d0';
+phantom.casperPath = 'C:\\PhantomJS\\n1k0-casperjs-e3a77d0';
 phantom.injectJs(phantom.casperPath + '\\bin\\bootstrap.js');
 
 var system = require('system');
@@ -60,7 +60,7 @@ casper.thenEvaluate(function(searchString) {
 }, system.args[1]);
 
 casper.waitForSelector('dd.equity', function() {
-	casper.capture('afterSearch.png');
+	//casper.capture('afterSearch.png');
 	console.log('Found dd.equity');
 });
 
@@ -79,7 +79,7 @@ casper.waitForSelector('#listTabs', function() {
 
 casper.waitForSelector('dd.equity', function() {
 	console.log('at ' + this.getCurrentUrl());
-	casper.capture('ddEquityFound.png');
+	//casper.capture('ddEquityFound.png');
 	console.log('found div.pagination');
 
    var pageCount = casper.evaluate(function() {
@@ -182,7 +182,7 @@ casper.waitForSelector('dd.equity', function() {
          extractedData.push(houseArray[i]);
       }
 
-		casper.capture('captureData.png');
+		//casper.capture('captureData.png');
 		//pages = []; //todo: remove this
 
       casper.each(pages, function (self, page) {
@@ -226,12 +226,20 @@ casper.then(function() {
 	 }, true);
 });
 
+// casper.thenClick('#continue-cust', function() {
+//    this.wait(5000, function(){});
+// });
+//
+// casper.thenClick('#ctl00_MainContent_Menu1_21', function() {
+//
+// });
+
 /*casper.thenEvaluate(function(username, password) {
     console.log(username + '|' + password);
     var f = document.querySelector('form');
     f.querySelector('input[name=username]').value = username;
     f.querySelector('input[name=Password]').value = password;
-	
+
     //f.submit();
 }, system.args[2], system.args[3]);
 
@@ -248,35 +256,38 @@ casper.thenClick('#mainContent > div.content.home.clearfix > div.col-left > div.
 //    this.capture('google.png');
 // });
 
+// casper.wait(5000, function() {
+//    console.log('waited for 5 seconds');
+// });
+
 casper.then(function() {
+   this.wait(10000, function(){});
+   console.log('capturing screenshot titleguy-property-reports.png');
    this.capture('titleguy-property-reports.png');
 });
 
-casper.waitForText('Property Reports', function() {
-   console.log('Found Property Reports link, clicking it');
-});
+// casper.waitForText('Property Reports', function() {
+//    console.log('Found Property Reports link, clicking it');
+// });
 
-// casper.wait(15000, function() {
-//    console.log('waited for 5 seconds');
-// })
-
-var classicSeriesAccess;
-casper.then(function() {
-   this.capture('classicSeriesAccess.png');
-   console.log('At ' + this.getCurrentUrl());
-
-   classicSeriesAccess = casper.evaluate(function() {
-      return jQuery('#tblMenuMain').find('a:eq(3)').attr('href');
-   });
-
-   console.log('classicSeriesAccess is ' + classicSeriesAccess);
-
-   casper.thenOpen(classicSeriesAccess, function() {
-      console.log('At ' + this.getCurrentUrl());
-   });
-});
+// var classicSeriesAccess;
+// casper.then(function() {
+//    //this.capture('classicSeriesAccess.png');
+//    console.log('At ' + this.getCurrentUrl());
+//
+//    classicSeriesAccess = casper.evaluate(function() {
+//       return jQuery('#tblMenuMain').find('a:eq(3)').attr('href');
+//    });
+//
+//    console.log('classicSeriesAccess is ' + classicSeriesAccess);
+//
+//    casper.thenOpen(classicSeriesAccess, function() {
+//       console.log('At ' + this.getCurrentUrl());
+//    });
+// });
 
 casper.then(function() {
+   console.log('Starting address loop');
    var i = 0;
    casper.each(extractedData, function (self, houseData) {
       try {
@@ -309,56 +320,56 @@ casper.then(function() {
             houseData.owner = owner;
          });
 
-         casper.thenClick('#CyberProfileTB > tbody > tr > td > nobr > a', function() {
-            console.log('opening property reports');
-         });
+         // casper.thenClick('#CyberProfileTB > tbody > tr > td > nobr > a', function() {
+         //    console.log('opening property reports');
+         // });
 
-         var recentForclosureActivity = false;
-         casper.waitForText('Recent Foreclosure Activity', function() {
-            console.log('recentForclosureActivity = true');
-            recentForclosureActivity = true;
-         }, function() {
-            console.log('recentForclosureActivity = false');
-            recentForclosureActivity = false;
-         }, 500);
-
-         casper.then(function() {
-            houseData.recentForclosureActivity = recentForclosureActivity;
-         });
-
-         casper.thenClick('#N5TB > tbody > tr > td > nobr > a', function() {
-            console.log('opening comparable properties');
-         });
-
-         casper.then(function() {
-            console.log('extracting comparable property data');
-
-            var comparableData = casper.evaluate(function() {
-               var comparableData = {
-                  properties: []
-               };
-
-               var rows = document.querySelectorAll('body > form > table > tbody > tr');
-               for (var i = 3; i < rows.length; i++) {
-                  var property = {};
-                  property.address = rows[i].children[1].innerText;
-                  property.date = rows[i].children[2].innerText;
-                  property.price = rows[i].children[3].innerText;
-                  property.pricePerSquareFoot = rows[i].children[4].innerText;
-                  property.bldArea = rows[i].children[5].innerText;
-                  property.rmBrBath = rows[i].children[6].innerText;
-                  property.yearBuilt = rows[i].children[7].innerText;
-                  property.lotArea = rows[i].children[8].innerText;
-                  property.pool = rows[i].children[9].innerText;
-                  property.proximity = rows[i].children[10].innerText;
-                  comparableData.properties.push(property);
-               }
-
-               return comparableData;
-            });
-
-            houseData.comparableData = comparableData;
-         });
+         // var recentForclosureActivity = false;
+         // casper.waitForText('Recent Foreclosure Activity', function() {
+         //    console.log('recentForclosureActivity = true');
+         //    recentForclosureActivity = true;
+         // }, function() {
+         //    console.log('recentForclosureActivity = false');
+         //    recentForclosureActivity = false;
+         // }, 500);
+         //
+         // casper.then(function() {
+         //    houseData.recentForclosureActivity = recentForclosureActivity;
+         // });
+         //
+         // casper.thenClick('#N5TB > tbody > tr > td > nobr > a', function() {
+         //    console.log('opening comparable properties');
+         // });
+         //
+         // casper.then(function() {
+         //    console.log('extracting comparable property data');
+         //
+         //    var comparableData = casper.evaluate(function() {
+         //       var comparableData = {
+         //          properties: []
+         //       };
+         //
+         //       var rows = document.querySelectorAll('body > form > table > tbody > tr');
+         //       for (var i = 3; i < rows.length; i++) {
+         //          var property = {};
+         //          property.address = rows[i].children[1].innerText;
+         //          property.date = rows[i].children[2].innerText;
+         //          property.price = rows[i].children[3].innerText;
+         //          property.pricePerSquareFoot = rows[i].children[4].innerText;
+         //          property.bldArea = rows[i].children[5].innerText;
+         //          property.rmBrBath = rows[i].children[6].innerText;
+         //          property.yearBuilt = rows[i].children[7].innerText;
+         //          property.lotArea = rows[i].children[8].innerText;
+         //          property.pool = rows[i].children[9].innerText;
+         //          property.proximity = rows[i].children[10].innerText;
+         //          comparableData.properties.push(property);
+         //       }
+         //
+         //       return comparableData;
+         //    });
+         //
+         //    houseData.comparableData = comparableData;
+         // });
 
          casper.then(function() {
             console.log('Finished processing ' + i + ' of ' + extractedData.length);
@@ -372,7 +383,7 @@ casper.then(function() {
 });
 
 casper.then(function() {
-   this.capture('titleguy.png');
+   //this.capture('titleguy.png');
 })
 
 //Write JSON out to disk
